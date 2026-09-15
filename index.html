@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensei-AI Tutor</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #f0f2f5; 
+            margin: 0; 
+            padding: 15px; 
+            display: flex;
+            flex-direction: column;
+            height: 95vh;
+        }
+        h2 { text-align: center; color: #b71c1c; margin-top: 0; }
+        #chatbox { 
+            flex-grow: 1; 
+            overflow-y: auto; 
+            background: white; 
+            padding: 15px; 
+            border-radius: 15px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            display: flex;
+            flex-direction: column;
+        }
+        .message { 
+            margin-bottom: 12px; 
+            padding: 12px 16px; 
+            border-radius: 18px; 
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        .user-msg { 
+            background: #ffebee; 
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .bot-msg { 
+            background: #e0e0e0; 
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        #input-area { 
+            display: flex; 
+            margin-top: 15px; 
+        }
+        #user-input { 
+            flex-grow: 1; 
+            padding: 12px; 
+            border-radius: 25px; 
+            border: 1px solid #ccc; 
+            outline: none;
+            font-size: 16px;
+        }
+        button { 
+            padding: 10px 20px; 
+            margin-left: 10px; 
+            background: #b71c1c; 
+            color: white; 
+            border: none; 
+            border-radius: 25px; 
+            cursor: pointer; 
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h2>🇯🇵 Sensei-AI</h2>
+    <div id="chatbox">
+        <div class="message bot-msg">Konnichiwa ! Je suis Sensei-AI. Quel est ton niveau actuel en japonais et que souhaites-tu réviser aujourd'hui ?</div>
+    </div>
+    
+    <div id="input-area">
+        <input type="text" id="user-input" placeholder="Écris ici..." onkeypress="handleKeyPress(event)">
+        <button onclick="sendMessage()">Envoyer</button>
+    </div>
+
+    <script>
+        const systemPrompt = `Tu es Sensei-AI, le tuteur de japonais le plus avancé. 
+        Adopte le paradigme tuteur-étudiant : ne donne jamais la solution directe, guide l'étudiant.
+        Adapte-toi à son niveau (JLPT N5 à N1).
+        Format obligatoire pour le vocabulaire introduit :
+        Phrase : [japonais natif]
+        Anki_Format : [espace avant le kanji][furigana entre crochets]
+        Traduction : [français]`;
+
+        function sendMessage() {
+            const inputField = document.getElementById("user-input");
+            const userText = inputField.value.trim();
+            if (!userText) return;
+
+            displayMessage(userText, "user-msg");
+            inputField.value = "";
+
+            const loadingId = "loading-" + Date.now();
+            displayMessage("Sensei-AI réfléchit...", "bot-msg", loadingId);
+            
+            setTimeout(() => {
+                const loadingElement = document.getElementById(loadingId);
+                if (loadingElement) loadingElement.remove();
+                displayMessage("C'est ici que la vraie réponse de l'IA s'affichera une fois ton API connectée !", "bot-msg");
+            }, 1500);
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        }
+
+        function displayMessage(text, className, id = null) {
+            const chatbox = document.getElementById("chatbox");
+            const msgDiv = document.createElement("div");
+            msgDiv.className = "message " + className;
+            msgDiv.innerText = text;
+            if (id) msgDiv.id = id;
+            chatbox.appendChild(msgDiv);
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+    </script>
+</body>
+</html>
