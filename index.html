@@ -2,198 +2,218 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <!-- Configuration PWA et écrans modernes (bord à bord) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#b71c1c">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Sensei-AI</title>
     
     <style>
-        /* ================= VARIABLES ET RESET ================= */
         :root {
             --primary: #b71c1c;
-            --primary-light: #f05545;
-            --primary-dark: #7f0000;
             --glass-bg: rgba(255, 255, 255, 0.85);
             --glass-border: rgba(255, 255, 255, 0.4);
-            /* Gestion des zones sûres (encoches iPhone/Samsung, écrans pliables) */
             --safe-top: env(safe-area-inset-top, 0px);
             --safe-bottom: env(safe-area-inset-bottom, 0px);
-            --safe-left: env(safe-area-inset-left, 0px);
-            --safe-right: env(safe-area-inset-right, 0px);
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            /* 100dvh est crucial pour les mobiles : s'adapte dynamiquement à la barre d'URL */
-            height: 100dvh;
-            width: 100vw;
+            margin: 0; padding: 0;
+            height: 100dvh; width: 100vw;
             overflow: hidden;
             background: url('https://upload.wikimedia.org/wikipedia/commons/0/0d/Great_Wave_off_Kanagawa2.jpg') no-repeat center center fixed;
             background-size: cover;
             color: #333;
-            display: flex;
-            flex-direction: column;
+            display: flex; flex-direction: column;
         }
 
-        /* ================= HEADER ================= */
-        .app-header {
-            padding-top: calc(15px + var(--safe-top));
-            padding-bottom: 15px;
-            background: rgba(183, 28, 28, 0.9);
-            backdrop-filter: blur(10px);
-            color: white;
-            text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            z-index: 100;
+        /* ================= SPLASH SCREEN (Animation d'ouverture) ================= */
+        #splash-screen {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh;
+            background: #b71c1c url('https://upload.wikimedia.org/wikipedia/commons/0/0d/Great_Wave_off_Kanagawa2.jpg') center/cover;
+            z-index: 9999;
+            display: flex; align-items: center; justify-content: center; flex-direction: column;
+            transition: opacity 0.8s ease, visibility 0.8s;
         }
-        .app-header h1 { margin: 0; font-size: 1.5rem; letter-spacing: 1px; }
-
-        /* ================= CONTENU PRINCIPAL ================= */
-        .main-content {
-            flex-grow: 1;
-            position: relative;
-            overflow: hidden;
-            padding-left: var(--safe-left);
-            padding-right: var(--safe-right);
+        #splash-screen::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(183, 28, 28, 0.6); /* Filtre rouge foncé sur la vague */
+        }
+        .splash-content {
+            position: relative; z-index: 10000; text-align: center;
+            animation: popIn 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        .splash-content h1 { color: white; font-size: 3.5rem; margin: 0; text-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .splash-content p { color: white; font-size: 1.5rem; margin-top: -10px; font-weight: bold; }
+        
+        @keyframes popIn {
+            0% { transform: scale(0.5) translateY(50px); opacity: 0; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
         }
 
-        .screen {
+        /* ================= SAKURA (Pétales en fond) ================= */
+        #sakura-container {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh;
+            pointer-events: none; z-index: 1; overflow: hidden;
+        }
+        .petal {
             position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            padding: 15px;
-            overflow-y: auto;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-            display: flex;
-            flex-direction: column;
+            background: rgba(255, 183, 197, 0.65);
+            border-radius: 10px 1px 10px 1px;
+            animation: fall linear infinite;
         }
-        .screen.active {
-            opacity: 1;
-            pointer-events: auto;
+        @keyframes fall {
+            0% { transform: translateY(-10vh) rotate(0deg) translateX(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(110vh) rotate(360deg) translateX(30px); opacity: 0; }
         }
 
-        .glass-panel {
-            background: var(--glass-bg);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            padding: 20px;
-            flex-grow: 1;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-            display: flex;
-            flex-direction: column;
+        /* ================= HEADER & NAV ================= */
+        .app-header {
+            padding-top: calc(15px + var(--safe-top)); padding-bottom: 15px;
+            background: rgba(183, 28, 28, 0.9); backdrop-filter: blur(10px);
+            color: white; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.3); z-index: 10;
         }
+        .app-header h1 { margin: 0; font-size: 1.5rem; }
 
-        h2 { color: var(--primary); margin-top: 0; text-align: center; }
-
-        /* ================= BOTTOM NAVIGATION ================= */
         .bottom-nav {
-            display: flex;
-            justify-content: space-around;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid #e0e0e0;
-            padding-top: 10px;
-            padding-bottom: calc(10px + var(--safe-bottom)); /* Gère la barre home des iPhone/Android */
-            padding-left: var(--safe-left);
-            padding-right: var(--safe-right);
-            z-index: 100;
+            display: flex; justify-content: space-around;
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+            padding-top: 10px; padding-bottom: calc(10px + var(--safe-bottom));
+            border-top: 1px solid #e0e0e0; z-index: 10;
         }
-
         .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            color: #757575;
-            text-decoration: none;
-            font-size: 0.75rem;
-            cursor: pointer;
-            transition: color 0.2s;
-            width: 25%;
+            display: flex; flex-direction: column; align-items: center;
+            color: #757575; font-size: 0.75rem; cursor: pointer; transition: color 0.2s; width: 20%;
         }
         .nav-item.active { color: var(--primary); font-weight: bold; }
         .nav-icon { font-size: 1.5rem; margin-bottom: 4px; }
 
-        /* ================= KANA GRID (Responsive) ================= */
-        .kana-grid {
-            display: grid;
-            /* S'adapte à la taille de l'écran (idéal pour les Fold) */
-            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
-            gap: 8px;
+        /* ================= ECRANS & TRANSITIONS ================= */
+        .main-content { flex-grow: 1; position: relative; z-index: 5; }
+        .screen {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            padding: 15px; overflow-y: auto;
+            opacity: 0; pointer-events: none; transform: scale(0.98);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            display: flex; flex-direction: column;
         }
-        .kana-card {
-            background: white; border: 1px solid #ddd; border-radius: 12px;
-            padding: 10px 5px; text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .kana-hira { font-size: 1.4rem; font-weight: bold; color: var(--primary); }
-        .kana-kata { font-size: 1rem; color: #555; }
-        .kana-roma { font-size: 0.75rem; color: #888; margin-top: 5px; font-weight: bold;}
+        .screen.active { opacity: 1; pointer-events: auto; transform: scale(1); }
 
-        /* ================= UI COMMUN (Boutons, Inputs) ================= */
+        .glass-panel {
+            background: var(--glass-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border); border-radius: 20px;
+            padding: 20px; flex-grow: 1; box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            display: flex; flex-direction: column;
+        }
+        h2 { color: var(--primary); margin-top: 0; text-align: center; }
+
+        /* ================= ECRAN ACCUEIL (Bulles Kanji) ================= */
+        .home-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 20px; 
+            flex-grow: 1; align-content: center; justify-items: center;
+        }
+        .bubble-btn {
+            width: 120px; height: 120px; border-radius: 50%;
+            background: white; border: 3px solid var(--primary);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1); cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .bubble-btn:active { transform: scale(0.9); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .bubble-kanji { font-size: 2.5rem; color: var(--primary); font-weight: bold; }
+        .bubble-label { font-size: 0.85rem; font-weight: bold; color: #555; margin-top: 5px; }
+
+        /* ================= UI GENERIQUE ================= */
+        .menu-list-btn {
+            background: white; border: 2px solid var(--primary); color: var(--primary);
+            border-radius: 15px; padding: 15px; margin-bottom: 10px; font-size: 1.1rem;
+            font-weight: bold; cursor: pointer; width: 100%; transition: 0.2s;
+        }
+        .menu-list-btn:active { background: var(--primary); color: white; }
+        
         .input-group { display: flex; gap: 10px; margin-top: 15px; }
         input[type="text"] {
             flex-grow: 1; padding: 15px; border-radius: 25px;
             border: 1px solid #ccc; font-size: 1rem; outline: none;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
         }
         .btn-primary {
             background: var(--primary); color: white; border: none;
-            border-radius: 25px; padding: 0 20px; font-weight: bold;
-            font-size: 1rem; cursor: pointer; box-shadow: 0 4px 6px rgba(183,28,28,0.3);
-            transition: transform 0.1s;
+            border-radius: 25px; padding: 0 20px; font-weight: bold; font-size: 1rem; cursor: pointer;
         }
-        .btn-primary:active { transform: scale(0.95); }
 
-        /* ================= CHATBOT ================= */
+        /* ================= MODULES SPECIFIQUES ================= */
+        .kana-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 8px; }
+        .kana-card { background: white; border: 1px solid #ddd; border-radius: 12px; padding: 10px 5px; text-align: center; }
+        .kana-hira { font-size: 1.4rem; font-weight: bold; color: var(--primary); }
+        
         #chatbox { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 10px;}
-        .message { padding: 12px 18px; border-radius: 20px; max-width: 85%; font-size: 0.95rem; line-height: 1.4; word-wrap: break-word;}
-        .user-msg { background: #ffebee; align-self: flex-end; border-bottom-right-radius: 4px; border: 1px solid #ffcdd2;}
-        .bot-msg { background: white; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid #e0e0e0; box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
-        .voice-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0 0 0 8px; vertical-align: middle;}
-
-        /* ================= JEU ================= */
-        #game-area {
-            flex-grow: 1; position: relative; background: rgba(227, 242, 253, 0.8);
-            border-radius: 15px; overflow: hidden; border: 2px solid #90caf9; margin-top: 10px;
-        }
-        .falling-word {
-            position: absolute; font-size: 1.8rem; font-weight: bold; color: var(--primary);
-            width: 100%; text-align: center; text-shadow: 2px 2px 4px rgba(255,255,255,0.8);
-        }
-        .stats-bar { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1rem; padding: 0 10px;}
+        .message { padding: 12px 18px; border-radius: 20px; max-width: 85%; line-height: 1.4;}
+        .user-msg { background: #ffebee; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .bot-msg { background: white; align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
+        
+        #game-area { flex-grow: 1; position: relative; background: rgba(227, 242, 253, 0.8); border-radius: 15px; overflow: hidden; margin-top: 10px;}
+        .falling-word { position: absolute; font-size: 1.8rem; font-weight: bold; color: var(--primary); width: 100%; text-align: center;}
     </style>
 </head>
 <body>
 
-    <!-- HEADER DE L'APPLICATION -->
+    <!-- ================= SPLASH SCREEN ================= -->
+    <div id="splash-screen">
+        <div class="splash-content">
+            <h1>Sensei</h1>
+            <p>先生</p>
+        </div>
+    </div>
+
+    <!-- ================= SAKURA (FOND) ================= -->
+    <div id="sakura-container"></div>
+
     <header class="app-header">
         <h1>🇯🇵 Sensei-AI</h1>
     </header>
 
-    <!-- ZONE DE CONTENU PRINCIPALE (Multi-écrans) -->
     <main class="main-content">
         
+        <!-- ECRAN 0 : ACCUEIL -->
+        <div id="screen-home" class="screen active">
+            <div class="glass-panel" style="justify-content: center; border: none; background: rgba(255,255,255,0.7);">
+                <div class="home-grid">
+                    <div class="bubble-btn" onclick="switchTab('screen-chat', 'tab-chat')">
+                        <span class="bubble-kanji">会話</span>
+                        <span class="bubble-label">Chatbot</span>
+                    </div>
+                    <div class="bubble-btn" onclick="switchTab('screen-kana', 'tab-kana')">
+                        <span class="bubble-kanji">文字</span>
+                        <span class="bubble-label">Alphabet</span>
+                    </div>
+                    <div class="bubble-btn" onclick="switchTab('screen-quiz-menu', 'tab-quiz')">
+                        <span class="bubble-kanji">試験</span>
+                        <span class="bubble-label">Quiz</span>
+                    </div>
+                    <div class="bubble-btn" onclick="switchTab('screen-game', 'tab-game'); startGame();">
+                        <span class="bubble-kanji">遊戯</span>
+                        <span class="bubble-label">Jeux</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- ECRAN 1 : CHATBOT -->
-        <div id="screen-chat" class="screen active">
+        <div id="screen-chat" class="screen">
             <div class="glass-panel">
-                <h2>Conversation</h2>
+                <h2>Conversation (会話)</h2>
                 <div id="chatbox">
                     <div class="message bot-msg">
                         Konnichiwa ! Je suis Sensei. Prêt pour la leçon d'aujourd'hui ? 
-                        <button class="voice-btn" onclick="speakJapanese('こんにちは！')">🔊</button>
+                        <button style="background:none; border:none; font-size:1.2rem;" onclick="speakJapanese('こんにちは！')">🔊</button>
                     </div>
                 </div>
                 <div class="input-group">
-                    <input type="text" id="chat-input" placeholder="Écrivez en français ou japonais..." onkeypress="if(event.key === 'Enter') sendChat()">
+                    <input type="text" id="chat-input" placeholder="Écrivez ici..." onkeypress="if(event.key === 'Enter') sendChat()">
                     <button class="btn-primary" onclick="sendChat()">Envoyer</button>
                 </div>
             </div>
@@ -202,22 +222,38 @@
         <!-- ECRAN 2 : KANA -->
         <div id="screen-kana" class="screen">
             <div class="glass-panel">
-                <h2>Syllabaires (Kana)</h2>
+                <h2>Alphabet (文字)</h2>
                 <div id="kana-container" class="kana-grid"></div>
             </div>
         </div>
 
-        <!-- ECRAN 3 : QUIZ -->
-        <div id="screen-quiz" class="screen">
+        <!-- ECRAN 3 : MENU QUIZ -->
+        <div id="screen-quiz-menu" class="screen">
             <div class="glass-panel">
-                <h2>Entraînement</h2>
+                <h2>Choix du Quiz</h2>
+                <p style="text-align:center; color:#555;">Que souhaitez-vous réviser ?</p>
+                <div style="flex-grow: 1; display:flex; flex-direction:column; justify-content:center;">
+                    <button class="menu-list-btn" onclick="startSpecificQuiz('hiragana')">あ Quiz Hiragana</button>
+                    <button class="menu-list-btn" onclick="startSpecificQuiz('katakana')">ア Quiz Katakana</button>
+                    <button class="menu-list-btn" onclick="startSpecificQuiz('mixed')">あ/ア Kana Mixte</button>
+                    <button class="menu-list-btn" onclick="startSpecificQuiz('vocab')">📝 Traduction Mots</button>
+                    <button class="menu-list-btn" onclick="startSpecificQuiz('phrases')">🗣️ Phrases Basiques</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ECRAN 3.5 : QUIZ ACTIF -->
+        <div id="screen-quiz-active" class="screen">
+            <div class="glass-panel">
+                <button onclick="switchTab('screen-quiz-menu', 'tab-quiz')" style="background:none; border:none; text-align:left; font-size:1.5rem; margin-bottom:10px;">⬅️</button>
+                <h2 id="quiz-title">Quiz</h2>
                 <div style="text-align: center; flex-grow: 1; display: flex; flex-direction: column; justify-content: center;">
-                    <p style="color: #666; font-size: 1.1rem;">Traduisez ce mot en Romaji :</p>
-                    <div id="quiz-word" style="font-size: 3rem; font-weight: bold; color: var(--primary); margin: 20px 0;">食べる</div>
+                    <p id="quiz-instruction" style="color: #666; font-size: 1.1rem;"></p>
+                    <div id="quiz-word" style="font-size: 3rem; font-weight: bold; color: var(--primary); margin: 20px 0;"></div>
                     <p id="quiz-feedback" style="font-weight: bold; height: 24px; font-size: 1.2rem;"></p>
                 </div>
                 <div class="input-group">
-                    <input type="text" id="quiz-input" placeholder="Tapez la traduction..." autocomplete="off" autocorrect="off" autocapitalize="none" onkeypress="if(event.key === 'Enter') checkQuiz()">
+                    <input type="text" id="quiz-input" placeholder="Tapez ici..." autocomplete="off" autocorrect="off" autocapitalize="none" onkeypress="if(event.key === 'Enter') checkQuiz()">
                     <button class="btn-primary" onclick="checkQuiz()">Valider</button>
                 </div>
             </div>
@@ -226,130 +262,168 @@
         <!-- ECRAN 4 : JEU -->
         <div id="screen-game" class="screen">
             <div class="glass-panel">
-                <h2>Défense Romaji</h2>
-                <div class="stats-bar">
+                <h2>Jeu (遊戯)</h2>
+                <div style="display:flex; justify-content:space-between; font-weight:bold;">
                     <span id="score-display">🏆 0</span>
                     <span id="lives-display">❤️ 3</span>
                 </div>
                 <div id="game-area"></div>
                 <div class="input-group">
-                    <input type="text" id="game-input" placeholder="Tapez le romaji vite !" autocomplete="off" autocorrect="off" autocapitalize="none" oninput="checkGameInput()">
+                    <input type="text" id="game-input" placeholder="Tapez vite !" autocomplete="off" oninput="checkGameInput()">
                 </div>
-                <button class="btn-primary" style="margin-top: 15px; padding: 15px;" onclick="startGame()">▶️ Démarrer / Recommencer</button>
             </div>
         </div>
 
     </main>
 
-    <!-- BOTTOM NAVIGATION BAR (Style App Native) -->
+    <!-- BOTTOM NAVIGATION -->
     <nav class="bottom-nav">
-        <div class="nav-item active" onclick="switchTab('screen-chat', this)">
-            <span class="nav-icon">💬</span>
-            <span>Chat</span>
+        <div class="nav-item active" id="tab-home" onclick="switchTab('screen-home', this.id)">
+            <span class="nav-icon">🏠</span><span>Accueil</span>
         </div>
-        <div class="nav-item" onclick="switchTab('screen-kana', this)">
-            <span class="nav-icon">あ</span>
-            <span>Syllabaires</span>
+        <div class="nav-item" id="tab-chat" onclick="switchTab('screen-chat', this.id)">
+            <span class="nav-icon">💬</span><span>Chat</span>
         </div>
-        <div class="nav-item" onclick="switchTab('screen-quiz', this)">
-            <span class="nav-icon">📝</span>
-            <span>Quiz</span>
+        <div class="nav-item" id="tab-kana" onclick="switchTab('screen-kana', this.id)">
+            <span class="nav-icon">あ</span><span>Kana</span>
         </div>
-        <div class="nav-item" onclick="switchTab('screen-game', this); startGame();">
-            <span class="nav-icon">👾</span>
-            <span>Jeu</span>
+        <div class="nav-item" id="tab-quiz" onclick="switchTab('screen-quiz-menu', this.id)">
+            <span class="nav-icon">📝</span><span>Quiz</span>
+        </div>
+        <div class="nav-item" id="tab-game" onclick="switchTab('screen-game', this.id); startGame();">
+            <span class="nav-icon">👾</span><span>Jeu</span>
         </div>
     </nav>
 
     <script>
-        // ================= GESTION DES ONGLETS =================
-        function switchTab(screenId, navElement) {
-            // Cacher tous les écrans
-            document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
-            // Désactiver tous les boutons du menu
-            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+        // ================= GESTION DU SPLASH SCREEN =================
+        window.onload = () => {
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                splash.style.opacity = '0';
+                setTimeout(() => splash.style.display = 'none', 800);
+            }, 2500); // Disparaît après 2.5 secondes
             
-            // Activer l'écran et le bouton demandés
-            document.getElementById(screenId).classList.add('active');
-            navElement.classList.add('active');
-            
-            // Mettre en pause le jeu si on quitte l'onglet
-            if(screenId !== 'screen-game') { stopGame(); }
-            if(screenId === 'screen-quiz' && !currentQuizWord.jp) { nextQuiz(); }
+            // Génération continue des sakura
+            setInterval(createSakura, 400);
+        };
+
+        // ================= GENERATION SAKURA =================
+        function createSakura() {
+            const container = document.getElementById('sakura-container');
+            const petal = document.createElement('div');
+            petal.classList.add('petal');
+            petal.style.left = Math.random() * 100 + 'vw';
+            petal.style.animationDuration = (Math.random() * 4 + 6) + 's'; // Chute entre 6 et 10s
+            petal.style.width = petal.style.height = (Math.random() * 8 + 8) + 'px';
+            container.appendChild(petal);
+            setTimeout(() => petal.remove(), 10000); // Nettoyage du DOM
         }
 
-        // ================= DONNEES =================
-        const kanaData = [
-            {h:'あ', k:'ア', r:'a'}, {h:'い', k:'イ', r:'i'}, {h:'う', k:'ウ', r:'u'}, {h:'え', k:'エ', r:'e'}, {h:'お', k:'オ', r:'o'},
-            {h:'か', k:'カ', r:'ka'}, {h:'き', k:'キ', r:'ki'}, {h:'く', k:'ク', r:'ku'}, {h:'け', k:'ケ', r:'ke'}, {h:'こ', k:'コ', r:'ko'},
-            {h:'さ', k:'サ', r:'sa'}, {h:'し', k:'シ', r:'shi'}, {h:'す', k:'ス', r:'su'}, {h:'せ', k:'セ', r:'se'}, {h:'そ', k:'ソ', r:'so'},
-            {h:'た', k:'タ', r:'ta'}, {h:'ち', k:'チ', r:'chi'}, {h:'つ', k:'ツ', r:'tsu'}, {h:'て', k:'テ', r:'te'}, {h:'と', k:'ト', r:'to'},
-            {h:'な', k:'ナ', r:'na'}, {h:'に', k:'ニ', r:'ni'}, {h:'ぬ', k:'ヌ', r:'nu'}, {h:'ね', k:'ネ', r:'ne'}, {h:'の', k:'ノ', r:'no'},
-            {h:'ま', k:'マ', r:'ma'}, {h:'み', k:'ミ', r:'mi'}, {h:'む', k:'ム', r:'mu'}, {h:'め', k:'メ', r:'me'}, {h:'も', k:'モ', r:'mo'}
-        ];
+        // ================= GESTION DES ONGLETS =================
+        function switchTab(screenId, tabId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            
+            document.getElementById(screenId).classList.add('active');
+            if(tabId && document.getElementById(tabId)) {
+                document.getElementById(tabId).classList.add('active');
+            }
+            
+            if(screenId !== 'screen-game') stopGame();
+        }
 
+        // ================= BANQUES DE DONNEES =================
+        const hiraganaData = [
+            {jp:'あ', romaji:'a'}, {jp:'い', romaji:'i'}, {jp:'う', romaji:'u'}, {jp:'え', romaji:'e'}, {jp:'お', romaji:'o'},
+            {jp:'か', romaji:'ka'}, {jp:'き', romaji:'ki'}, {jp:'く', romaji:'ku'}, {jp:'け', romaji:'ke'}, {jp:'こ', romaji:'ko'}
+        ];
+        const katakanaData = [
+            {jp:'ア', romaji:'a'}, {jp:'イ', romaji:'i'}, {jp:'ウ', romaji:'u'}, {jp:'エ', romaji:'e'}, {jp:'オ', romaji:'o'},
+            {jp:'カ', romaji:'ka'}, {jp:'キ', romaji:'ki'}, {jp:'ク', romaji:'ku'}, {jp:'ケ', romaji:'ke'}, {jp:'コ', romaji:'ko'}
+        ];
         const vocabData = [
-            {jp: 'たべる', romaji: 'taberu', fr: 'manger'},
-            {jp: 'のむ', romaji: 'nomu', fr: 'boire'},
-            {jp: 'くるま', romaji: 'kuruma', fr: 'voiture'},
-            {jp: 'みず', romaji: 'mizu', fr: 'eau'},
-            {jp: 'ねる', romaji: 'neru', fr: 'dormir'},
-            {jp: 'ほん', romaji: 'hon', fr: 'livre'},
-            {jp: 'いく', romaji: 'iku', fr: 'aller'},
-            {jp: 'みる', romaji: 'miru', fr: 'voir'},
-            {jp: 'ねこ', romaji: 'neko', fr: 'chat'},
-            {jp: 'いぬ', romaji: 'inu', fr: 'chien'}
+            {jp: 'たべる', romaji: 'taberu', fr: 'manger'}, {jp: 'のむ', romaji: 'nomu', fr: 'boire'},
+            {jp: 'くるま', romaji: 'kuruma', fr: 'voiture'}, {jp: 'ねる', romaji: 'neru', fr: 'dormir'},
+            {jp: 'ねこ', romaji: 'neko', fr: 'chat'}, {jp: 'いぬ', romaji: 'inu', fr: 'chien'}
+        ];
+        const phrasesData = [
+            {jp: 'おはようございます', romaji: 'ohayou gozaimasu', fr: 'bonjour (matin)'},
+            {jp: 'ありがとう', romaji: 'arigatou', fr: 'merci'},
+            {jp: 'すみません', romaji: 'sumimasen', fr: 'excusez-moi'},
+            {jp: 'さようなら', romaji: 'sayounara', fr: 'au revoir'},
+            {jp: 'はい', romaji: 'hai', fr: 'oui'},
+            {jp: 'いいえ', romaji: 'iie', fr: 'non'}
         ];
 
-        // Remplir le tableau de Kana
+        // Affichage Tableau Kana
         const kanaContainer = document.getElementById('kana-container');
-        kanaData.forEach(item => {
+        for(let i=0; i<hiraganaData.length; i++) {
             kanaContainer.innerHTML += `
                 <div class="kana-card">
-                    <div class="kana-hira">${item.h}</div>
-                    <div class="kana-kata">${item.k}</div>
-                    <div class="kana-roma">${item.r}</div>
+                    <div class="kana-hira">${hiraganaData[i].jp}</div>
+                    <div style="font-size: 1rem; color: #555;">${katakanaData[i].jp}</div>
+                    <div style="font-size: 0.75rem; color: #888; font-weight:bold;">${hiraganaData[i].romaji}</div>
                 </div>`;
-        });
+        }
 
-        // ================= TTS (Synthèse Vocale) =================
         function speakJapanese(text) {
             const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'ja-JP';
-            utterance.rate = 0.85;
+            utterance.lang = 'ja-JP'; utterance.rate = 0.85;
             window.speechSynthesis.speak(utterance);
         }
 
-        // ================= CHATBOT =================
         function sendChat() {
             const input = document.getElementById('chat-input');
             const text = input.value.trim();
             if (!text) return;
-
             const chatbox = document.getElementById('chatbox');
             chatbox.innerHTML += `<div class="message user-msg">${text}</div>`;
-            input.value = "";
-            chatbox.scrollTop = chatbox.scrollHeight;
-
-            // Simulation API
+            input.value = ""; chatbox.scrollTop = chatbox.scrollHeight;
+            
             setTimeout(() => {
-                const botReply = "素晴らしい！ (Subarashii - Super !)";
-                const japaneseTextToRead = "素晴らしい";
-                chatbox.innerHTML += `
-                    <div class="message bot-msg">
-                        ${botReply} 
-                        <button class="voice-btn" onclick="speakJapanese('${japaneseTextToRead}')">🔊</button>
-                    </div>`;
+                chatbox.innerHTML += `<div class="message bot-msg">素晴らしい！ <button style="background:none; border:none; font-size:1.2rem;" onclick="speakJapanese('素晴らしい')">🔊</button></div>`;
                 chatbox.scrollTop = chatbox.scrollHeight;
-                speakJapanese(japaneseTextToRead);
+                speakJapanese("素晴らしい");
             }, 800);
         }
 
-        // ================= QUIZ =================
-        let currentQuizWord = {};
-        function nextQuiz() {
-            currentQuizWord = vocabData[Math.floor(Math.random() * vocabData.length)];
-            document.getElementById('quiz-word').innerText = currentQuizWord.jp;
+        // ================= SYSTEME DE QUIZ MULTIPLES =================
+        let currentQuizList = [];
+        let currentQuizItem = {};
+        let currentQuizMode = "";
+
+        function startSpecificQuiz(mode) {
+            currentQuizMode = mode;
+            switchTab('screen-quiz-active', 'tab-quiz');
+            
+            if(mode === 'hiragana') {
+                currentQuizList = [...hiraganaData];
+                document.getElementById('quiz-title').innerText = "Quiz Hiragana";
+                document.getElementById('quiz-instruction').innerText = "Traduisez en Romaji :";
+            } else if(mode === 'katakana') {
+                currentQuizList = [...katakanaData];
+                document.getElementById('quiz-title').innerText = "Quiz Katakana";
+                document.getElementById('quiz-instruction').innerText = "Traduisez en Romaji :";
+            } else if(mode === 'mixed') {
+                currentQuizList = [...hiraganaData, ...katakanaData];
+                document.getElementById('quiz-title').innerText = "Quiz Kana Mixte";
+                document.getElementById('quiz-instruction').innerText = "Traduisez en Romaji :";
+            } else if(mode === 'vocab') {
+                currentQuizList = [...vocabData];
+                document.getElementById('quiz-title').innerText = "Traduction Mots";
+                document.getElementById('quiz-instruction').innerText = "Traduisez en Romaji ou Français :";
+            } else if(mode === 'phrases') {
+                currentQuizList = [...phrasesData];
+                document.getElementById('quiz-title').innerText = "Phrases Basiques";
+                document.getElementById('quiz-instruction').innerText = "Que signifie cette phrase ? (Romaji/FR)";
+            }
+            nextQuizItem();
+        }
+
+        function nextQuizItem() {
+            currentQuizItem = currentQuizList[Math.floor(Math.random() * currentQuizList.length)];
+            document.getElementById('quiz-word').innerText = currentQuizItem.jp;
             document.getElementById('quiz-input').value = "";
             document.getElementById('quiz-feedback').innerText = "";
         }
@@ -358,86 +432,59 @@
             const answer = document.getElementById('quiz-input').value.trim().toLowerCase();
             const feedback = document.getElementById('quiz-feedback');
             
-            if (answer === currentQuizWord.romaji || answer === currentQuizWord.fr) {
-                feedback.style.color = "#4CAF50"; // Vert
-                feedback.innerText = "✅ Exact !";
-                speakJapanese(currentQuizWord.jp);
-                setTimeout(nextQuiz, 1200);
+            // Validation flexible (Romaji ou Français si disponible)
+            const isCorrect = (answer === currentQuizItem.romaji) || (currentQuizItem.fr && answer === currentQuizItem.fr.toLowerCase());
+            
+            if (isCorrect) {
+                feedback.style.color = "#4CAF50"; feedback.innerText = "✅ Exact !";
+                speakJapanese(currentQuizItem.jp);
+                setTimeout(nextQuizItem, 1200);
             } else {
-                feedback.style.color = "#F44336"; // Rouge
-                feedback.innerText = "❌ Faux, réessaie.";
+                feedback.style.color = "#F44336"; feedback.innerText = "❌ Faux, réessaie.";
             }
         }
 
         // ================= MINI JEU =================
         let gameInterval, fallingWordObj = null;
         let score = 0, lives = 3, gameActive = false;
-
+        
         function startGame() {
             score = 0; lives = 3; gameActive = true;
             updateScoreBoard();
             document.getElementById('game-input').value = "";
-            document.getElementById('game-input').focus();
             document.getElementById('game-area').innerHTML = "";
             spawnWord();
         }
-
-        function stopGame() {
-            gameActive = false;
-            clearInterval(gameInterval);
-            document.getElementById('game-area').innerHTML = "";
-        }
-
+        function stopGame() { gameActive = false; clearInterval(gameInterval); document.getElementById('game-area').innerHTML = ""; }
+        
         function spawnWord() {
             if (!gameActive) return;
-            if (lives <= 0) {
-                alert("🎮 Game Over ! Score final : " + score);
-                stopGame();
-                return;
-            }
-
+            if (lives <= 0) { alert("🎮 Game Over ! Score final : " + score); stopGame(); return; }
             const wordData = vocabData[Math.floor(Math.random() * vocabData.length)];
             fallingWordObj = { data: wordData, y: 0 };
-            
-            const area = document.getElementById('game-area');
-            area.innerHTML = `<div id="falling-element" class="falling-word" style="top: 0px;">${wordData.jp}</div>`;
-            
+            document.getElementById('game-area').innerHTML = `<div id="falling-element" class="falling-word" style="top: 0px;">${wordData.jp}</div>`;
             clearInterval(gameInterval);
-            // Vitesse adaptée aux mobiles (le requestAnimationFrame serait mieux, mais setInterval suffit ici)
             gameInterval = setInterval(moveWord, 40); 
         }
-
         function moveWord() {
             if(!gameActive) return;
-            fallingWordObj.y += 1.5; // Vitesse de chute
+            fallingWordObj.y += 1.5;
             const el = document.getElementById('falling-element');
-            const areaHeight = document.getElementById('game-area').offsetHeight;
-            
             if (el) {
                 el.style.top = fallingWordObj.y + 'px';
-                // Si le mot touche le bas (30px de marge)
-                if (fallingWordObj.y > areaHeight - 35) {
-                    lives--;
-                    updateScoreBoard();
-                    spawnWord();
+                if (fallingWordObj.y > document.getElementById('game-area').offsetHeight - 35) {
+                    lives--; updateScoreBoard(); spawnWord();
                 }
             }
         }
-
         function checkGameInput() {
             if(!gameActive) return;
             const input = document.getElementById('game-input');
-            const value = input.value.trim().toLowerCase();
-            
-            if (fallingWordObj && value === fallingWordObj.data.romaji) {
-                score += 10;
-                updateScoreBoard();
-                input.value = "";
-                speakJapanese(fallingWordObj.data.jp);
-                spawnWord();
+            if (fallingWordObj && input.value.trim().toLowerCase() === fallingWordObj.data.romaji) {
+                score += 10; updateScoreBoard(); input.value = "";
+                speakJapanese(fallingWordObj.data.jp); spawnWord();
             }
         }
-
         function updateScoreBoard() {
             document.getElementById('score-display').innerText = `🏆 ${score}`;
             document.getElementById('lives-display').innerText = `❤️ ${lives}`;
