@@ -2,122 +2,445 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sensei-AI Tutor</title>
+    <!-- Configuration PWA et écrans modernes (bord à bord) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#b71c1c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Sensei-AI</title>
+    
     <style>
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background-color: #f0f2f5; 
-            margin: 0; 
-            padding: 15px; 
+        /* ================= VARIABLES ET RESET ================= */
+        :root {
+            --primary: #b71c1c;
+            --primary-light: #f05545;
+            --primary-dark: #7f0000;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            /* Gestion des zones sûres (encoches iPhone/Samsung, écrans pliables) */
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-left: env(safe-area-inset-left, 0px);
+            --safe-right: env(safe-area-inset-right, 0px);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            /* 100dvh est crucial pour les mobiles : s'adapte dynamiquement à la barre d'URL */
+            height: 100dvh;
+            width: 100vw;
+            overflow: hidden;
+            background: url('https://upload.wikimedia.org/wikipedia/commons/0/0d/Great_Wave_off_Kanagawa2.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: #333;
             display: flex;
             flex-direction: column;
-            height: 95vh;
         }
-        h2 { text-align: center; color: #b71c1c; margin-top: 0; }
-        #chatbox { 
-            flex-grow: 1; 
-            overflow-y: auto; 
-            background: white; 
-            padding: 15px; 
-            border-radius: 15px; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+
+        /* ================= HEADER ================= */
+        .app-header {
+            padding-top: calc(15px + var(--safe-top));
+            padding-bottom: 15px;
+            background: rgba(183, 28, 28, 0.9);
+            backdrop-filter: blur(10px);
+            color: white;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 100;
+        }
+        .app-header h1 { margin: 0; font-size: 1.5rem; letter-spacing: 1px; }
+
+        /* ================= CONTENU PRINCIPAL ================= */
+        .main-content {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+            padding-left: var(--safe-left);
+            padding-right: var(--safe-right);
+        }
+
+        .screen {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            padding: 15px;
+            overflow-y: auto;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
             display: flex;
             flex-direction: column;
         }
-        .message { 
-            margin-bottom: 12px; 
-            padding: 12px 16px; 
-            border-radius: 18px; 
-            max-width: 80%;
-            word-wrap: break-word;
+        .screen.active {
+            opacity: 1;
+            pointer-events: auto;
         }
-        .user-msg { 
-            background: #ffebee; 
-            align-self: flex-end;
-            border-bottom-right-radius: 4px;
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 20px;
+            flex-grow: 1;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
         }
-        .bot-msg { 
-            background: #e0e0e0; 
-            align-self: flex-start;
-            border-bottom-left-radius: 4px;
+
+        h2 { color: var(--primary); margin-top: 0; text-align: center; }
+
+        /* ================= BOTTOM NAVIGATION ================= */
+        .bottom-nav {
+            display: flex;
+            justify-content: space-around;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid #e0e0e0;
+            padding-top: 10px;
+            padding-bottom: calc(10px + var(--safe-bottom)); /* Gère la barre home des iPhone/Android */
+            padding-left: var(--safe-left);
+            padding-right: var(--safe-right);
+            z-index: 100;
         }
-        #input-area { 
-            display: flex; 
-            margin-top: 15px; 
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #757575;
+            text-decoration: none;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: color 0.2s;
+            width: 25%;
         }
-        #user-input { 
-            flex-grow: 1; 
-            padding: 12px; 
-            border-radius: 25px; 
-            border: 1px solid #ccc; 
-            outline: none;
-            font-size: 16px;
+        .nav-item.active { color: var(--primary); font-weight: bold; }
+        .nav-icon { font-size: 1.5rem; margin-bottom: 4px; }
+
+        /* ================= KANA GRID (Responsive) ================= */
+        .kana-grid {
+            display: grid;
+            /* S'adapte à la taille de l'écran (idéal pour les Fold) */
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 8px;
         }
-        button { 
-            padding: 10px 20px; 
-            margin-left: 10px; 
-            background: #b71c1c; 
-            color: white; 
-            border: none; 
-            border-radius: 25px; 
-            cursor: pointer; 
-            font-weight: bold;
+        .kana-card {
+            background: white; border: 1px solid #ddd; border-radius: 12px;
+            padding: 10px 5px; text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
+        .kana-hira { font-size: 1.4rem; font-weight: bold; color: var(--primary); }
+        .kana-kata { font-size: 1rem; color: #555; }
+        .kana-roma { font-size: 0.75rem; color: #888; margin-top: 5px; font-weight: bold;}
+
+        /* ================= UI COMMUN (Boutons, Inputs) ================= */
+        .input-group { display: flex; gap: 10px; margin-top: 15px; }
+        input[type="text"] {
+            flex-grow: 1; padding: 15px; border-radius: 25px;
+            border: 1px solid #ccc; font-size: 1rem; outline: none;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .btn-primary {
+            background: var(--primary); color: white; border: none;
+            border-radius: 25px; padding: 0 20px; font-weight: bold;
+            font-size: 1rem; cursor: pointer; box-shadow: 0 4px 6px rgba(183,28,28,0.3);
+            transition: transform 0.1s;
+        }
+        .btn-primary:active { transform: scale(0.95); }
+
+        /* ================= CHATBOT ================= */
+        #chatbox { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 10px;}
+        .message { padding: 12px 18px; border-radius: 20px; max-width: 85%; font-size: 0.95rem; line-height: 1.4; word-wrap: break-word;}
+        .user-msg { background: #ffebee; align-self: flex-end; border-bottom-right-radius: 4px; border: 1px solid #ffcdd2;}
+        .bot-msg { background: white; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid #e0e0e0; box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
+        .voice-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0 0 0 8px; vertical-align: middle;}
+
+        /* ================= JEU ================= */
+        #game-area {
+            flex-grow: 1; position: relative; background: rgba(227, 242, 253, 0.8);
+            border-radius: 15px; overflow: hidden; border: 2px solid #90caf9; margin-top: 10px;
+        }
+        .falling-word {
+            position: absolute; font-size: 1.8rem; font-weight: bold; color: var(--primary);
+            width: 100%; text-align: center; text-shadow: 2px 2px 4px rgba(255,255,255,0.8);
+        }
+        .stats-bar { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1rem; padding: 0 10px;}
     </style>
 </head>
 <body>
-    <h2>🇯🇵 Sensei-AI</h2>
-    <div id="chatbox">
-        <div class="message bot-msg">Konnichiwa ! Je suis Sensei-AI. Quel est ton niveau actuel en japonais et que souhaites-tu réviser aujourd'hui ?</div>
-    </div>
-    
-    <div id="input-area">
-        <input type="text" id="user-input" placeholder="Écris ici..." onkeypress="handleKeyPress(event)">
-        <button onclick="sendMessage()">Envoyer</button>
-    </div>
+
+    <!-- HEADER DE L'APPLICATION -->
+    <header class="app-header">
+        <h1>🇯🇵 Sensei-AI</h1>
+    </header>
+
+    <!-- ZONE DE CONTENU PRINCIPALE (Multi-écrans) -->
+    <main class="main-content">
+        
+        <!-- ECRAN 1 : CHATBOT -->
+        <div id="screen-chat" class="screen active">
+            <div class="glass-panel">
+                <h2>Conversation</h2>
+                <div id="chatbox">
+                    <div class="message bot-msg">
+                        Konnichiwa ! Je suis Sensei. Prêt pour la leçon d'aujourd'hui ? 
+                        <button class="voice-btn" onclick="speakJapanese('こんにちは！')">🔊</button>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="chat-input" placeholder="Écrivez en français ou japonais..." onkeypress="if(event.key === 'Enter') sendChat()">
+                    <button class="btn-primary" onclick="sendChat()">Envoyer</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ECRAN 2 : KANA -->
+        <div id="screen-kana" class="screen">
+            <div class="glass-panel">
+                <h2>Syllabaires (Kana)</h2>
+                <div id="kana-container" class="kana-grid"></div>
+            </div>
+        </div>
+
+        <!-- ECRAN 3 : QUIZ -->
+        <div id="screen-quiz" class="screen">
+            <div class="glass-panel">
+                <h2>Entraînement</h2>
+                <div style="text-align: center; flex-grow: 1; display: flex; flex-direction: column; justify-content: center;">
+                    <p style="color: #666; font-size: 1.1rem;">Traduisez ce mot en Romaji :</p>
+                    <div id="quiz-word" style="font-size: 3rem; font-weight: bold; color: var(--primary); margin: 20px 0;">食べる</div>
+                    <p id="quiz-feedback" style="font-weight: bold; height: 24px; font-size: 1.2rem;"></p>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="quiz-input" placeholder="Tapez la traduction..." autocomplete="off" autocorrect="off" autocapitalize="none" onkeypress="if(event.key === 'Enter') checkQuiz()">
+                    <button class="btn-primary" onclick="checkQuiz()">Valider</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ECRAN 4 : JEU -->
+        <div id="screen-game" class="screen">
+            <div class="glass-panel">
+                <h2>Défense Romaji</h2>
+                <div class="stats-bar">
+                    <span id="score-display">🏆 0</span>
+                    <span id="lives-display">❤️ 3</span>
+                </div>
+                <div id="game-area"></div>
+                <div class="input-group">
+                    <input type="text" id="game-input" placeholder="Tapez le romaji vite !" autocomplete="off" autocorrect="off" autocapitalize="none" oninput="checkGameInput()">
+                </div>
+                <button class="btn-primary" style="margin-top: 15px; padding: 15px;" onclick="startGame()">▶️ Démarrer / Recommencer</button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- BOTTOM NAVIGATION BAR (Style App Native) -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('screen-chat', this)">
+            <span class="nav-icon">💬</span>
+            <span>Chat</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('screen-kana', this)">
+            <span class="nav-icon">あ</span>
+            <span>Syllabaires</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('screen-quiz', this)">
+            <span class="nav-icon">📝</span>
+            <span>Quiz</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('screen-game', this); startGame();">
+            <span class="nav-icon">👾</span>
+            <span>Jeu</span>
+        </div>
+    </nav>
 
     <script>
-        const systemPrompt = `Tu es Sensei-AI, le tuteur de japonais le plus avancé. 
-        Adopte le paradigme tuteur-étudiant : ne donne jamais la solution directe, guide l'étudiant.
-        Adapte-toi à son niveau (JLPT N5 à N1).
-        Format obligatoire pour le vocabulaire introduit :
-        Phrase : [japonais natif]
-        Anki_Format : [espace avant le kanji][furigana entre crochets]
-        Traduction : [français]`;
-
-        function sendMessage() {
-            const inputField = document.getElementById("user-input");
-            const userText = inputField.value.trim();
-            if (!userText) return;
-
-            displayMessage(userText, "user-msg");
-            inputField.value = "";
-
-            const loadingId = "loading-" + Date.now();
-            displayMessage("Sensei-AI réfléchit...", "bot-msg", loadingId);
+        // ================= GESTION DES ONGLETS =================
+        function switchTab(screenId, navElement) {
+            // Cacher tous les écrans
+            document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
+            // Désactiver tous les boutons du menu
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
             
-            setTimeout(() => {
-                const loadingElement = document.getElementById(loadingId);
-                if (loadingElement) loadingElement.remove();
-                displayMessage("C'est ici que la vraie réponse de l'IA s'affichera une fois ton API connectée !", "bot-msg");
-            }, 1500);
+            // Activer l'écran et le bouton demandés
+            document.getElementById(screenId).classList.add('active');
+            navElement.classList.add('active');
+            
+            // Mettre en pause le jeu si on quitte l'onglet
+            if(screenId !== 'screen-game') { stopGame(); }
+            if(screenId === 'screen-quiz' && !currentQuizWord.jp) { nextQuiz(); }
         }
 
-        function handleKeyPress(event) {
-            if (event.key === "Enter") {
-                sendMessage();
+        // ================= DONNEES =================
+        const kanaData = [
+            {h:'あ', k:'ア', r:'a'}, {h:'い', k:'イ', r:'i'}, {h:'う', k:'ウ', r:'u'}, {h:'え', k:'エ', r:'e'}, {h:'お', k:'オ', r:'o'},
+            {h:'か', k:'カ', r:'ka'}, {h:'き', k:'キ', r:'ki'}, {h:'く', k:'ク', r:'ku'}, {h:'け', k:'ケ', r:'ke'}, {h:'こ', k:'コ', r:'ko'},
+            {h:'さ', k:'サ', r:'sa'}, {h:'し', k:'シ', r:'shi'}, {h:'す', k:'ス', r:'su'}, {h:'せ', k:'セ', r:'se'}, {h:'そ', k:'ソ', r:'so'},
+            {h:'た', k:'タ', r:'ta'}, {h:'ち', k:'チ', r:'chi'}, {h:'つ', k:'ツ', r:'tsu'}, {h:'て', k:'テ', r:'te'}, {h:'と', k:'ト', r:'to'},
+            {h:'な', k:'ナ', r:'na'}, {h:'に', k:'ニ', r:'ni'}, {h:'ぬ', k:'ヌ', r:'nu'}, {h:'ね', k:'ネ', r:'ne'}, {h:'の', k:'ノ', r:'no'},
+            {h:'ま', k:'マ', r:'ma'}, {h:'み', k:'ミ', r:'mi'}, {h:'む', k:'ム', r:'mu'}, {h:'め', k:'メ', r:'me'}, {h:'も', k:'モ', r:'mo'}
+        ];
+
+        const vocabData = [
+            {jp: 'たべる', romaji: 'taberu', fr: 'manger'},
+            {jp: 'のむ', romaji: 'nomu', fr: 'boire'},
+            {jp: 'くるま', romaji: 'kuruma', fr: 'voiture'},
+            {jp: 'みず', romaji: 'mizu', fr: 'eau'},
+            {jp: 'ねる', romaji: 'neru', fr: 'dormir'},
+            {jp: 'ほん', romaji: 'hon', fr: 'livre'},
+            {jp: 'いく', romaji: 'iku', fr: 'aller'},
+            {jp: 'みる', romaji: 'miru', fr: 'voir'},
+            {jp: 'ねこ', romaji: 'neko', fr: 'chat'},
+            {jp: 'いぬ', romaji: 'inu', fr: 'chien'}
+        ];
+
+        // Remplir le tableau de Kana
+        const kanaContainer = document.getElementById('kana-container');
+        kanaData.forEach(item => {
+            kanaContainer.innerHTML += `
+                <div class="kana-card">
+                    <div class="kana-hira">${item.h}</div>
+                    <div class="kana-kata">${item.k}</div>
+                    <div class="kana-roma">${item.r}</div>
+                </div>`;
+        });
+
+        // ================= TTS (Synthèse Vocale) =================
+        function speakJapanese(text) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ja-JP';
+            utterance.rate = 0.85;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // ================= CHATBOT =================
+        function sendChat() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const chatbox = document.getElementById('chatbox');
+            chatbox.innerHTML += `<div class="message user-msg">${text}</div>`;
+            input.value = "";
+            chatbox.scrollTop = chatbox.scrollHeight;
+
+            // Simulation API
+            setTimeout(() => {
+                const botReply = "素晴らしい！ (Subarashii - Super !)";
+                const japaneseTextToRead = "素晴らしい";
+                chatbox.innerHTML += `
+                    <div class="message bot-msg">
+                        ${botReply} 
+                        <button class="voice-btn" onclick="speakJapanese('${japaneseTextToRead}')">🔊</button>
+                    </div>`;
+                chatbox.scrollTop = chatbox.scrollHeight;
+                speakJapanese(japaneseTextToRead);
+            }, 800);
+        }
+
+        // ================= QUIZ =================
+        let currentQuizWord = {};
+        function nextQuiz() {
+            currentQuizWord = vocabData[Math.floor(Math.random() * vocabData.length)];
+            document.getElementById('quiz-word').innerText = currentQuizWord.jp;
+            document.getElementById('quiz-input').value = "";
+            document.getElementById('quiz-feedback').innerText = "";
+        }
+
+        function checkQuiz() {
+            const answer = document.getElementById('quiz-input').value.trim().toLowerCase();
+            const feedback = document.getElementById('quiz-feedback');
+            
+            if (answer === currentQuizWord.romaji || answer === currentQuizWord.fr) {
+                feedback.style.color = "#4CAF50"; // Vert
+                feedback.innerText = "✅ Exact !";
+                speakJapanese(currentQuizWord.jp);
+                setTimeout(nextQuiz, 1200);
+            } else {
+                feedback.style.color = "#F44336"; // Rouge
+                feedback.innerText = "❌ Faux, réessaie.";
             }
         }
 
-        function displayMessage(text, className, id = null) {
-            const chatbox = document.getElementById("chatbox");
-            const msgDiv = document.createElement("div");
-            msgDiv.className = "message " + className;
-            msgDiv.innerText = text;
-            if (id) msgDiv.id = id;
-            chatbox.appendChild(msgDiv);
-            chatbox.scrollTop = chatbox.scrollHeight;
+        // ================= MINI JEU =================
+        let gameInterval, fallingWordObj = null;
+        let score = 0, lives = 3, gameActive = false;
+
+        function startGame() {
+            score = 0; lives = 3; gameActive = true;
+            updateScoreBoard();
+            document.getElementById('game-input').value = "";
+            document.getElementById('game-input').focus();
+            document.getElementById('game-area').innerHTML = "";
+            spawnWord();
+        }
+
+        function stopGame() {
+            gameActive = false;
+            clearInterval(gameInterval);
+            document.getElementById('game-area').innerHTML = "";
+        }
+
+        function spawnWord() {
+            if (!gameActive) return;
+            if (lives <= 0) {
+                alert("🎮 Game Over ! Score final : " + score);
+                stopGame();
+                return;
+            }
+
+            const wordData = vocabData[Math.floor(Math.random() * vocabData.length)];
+            fallingWordObj = { data: wordData, y: 0 };
+            
+            const area = document.getElementById('game-area');
+            area.innerHTML = `<div id="falling-element" class="falling-word" style="top: 0px;">${wordData.jp}</div>`;
+            
+            clearInterval(gameInterval);
+            // Vitesse adaptée aux mobiles (le requestAnimationFrame serait mieux, mais setInterval suffit ici)
+            gameInterval = setInterval(moveWord, 40); 
+        }
+
+        function moveWord() {
+            if(!gameActive) return;
+            fallingWordObj.y += 1.5; // Vitesse de chute
+            const el = document.getElementById('falling-element');
+            const areaHeight = document.getElementById('game-area').offsetHeight;
+            
+            if (el) {
+                el.style.top = fallingWordObj.y + 'px';
+                // Si le mot touche le bas (30px de marge)
+                if (fallingWordObj.y > areaHeight - 35) {
+                    lives--;
+                    updateScoreBoard();
+                    spawnWord();
+                }
+            }
+        }
+
+        function checkGameInput() {
+            if(!gameActive) return;
+            const input = document.getElementById('game-input');
+            const value = input.value.trim().toLowerCase();
+            
+            if (fallingWordObj && value === fallingWordObj.data.romaji) {
+                score += 10;
+                updateScoreBoard();
+                input.value = "";
+                speakJapanese(fallingWordObj.data.jp);
+                spawnWord();
+            }
+        }
+
+        function updateScoreBoard() {
+            document.getElementById('score-display').innerText = `🏆 ${score}`;
+            document.getElementById('lives-display').innerText = `❤️ ${lives}`;
         }
     </script>
 </body>
